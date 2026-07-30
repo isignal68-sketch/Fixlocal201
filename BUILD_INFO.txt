@@ -1,0 +1,30 @@
+FixLocal — build verification file
+===================================
+
+If you can see this file after unzipping, you have successfully downloaded
+the correct, current version of the project.
+
+Build stamp: 2026-07-30 13:24 UTC
+Version tag: v9-sitemap-resilience-fix
+
+Quick way to confirm you have THIS exact version before creating a GitHub
+repo or deploying: open src/app/sitemap.ts and look for the word "try"
+appearing right after the staticRoutes array is defined (around line 22).
+If it's there, you have the current build. If it's missing, something went
+wrong in the download/unzip step and you should re-download the zip from
+the chat rather than reuse a file already sitting on your device.
+
+Fixes included as of this build:
+- React 19 -> 18.3.1 (dependency conflict fix)
+- Fixed orphaned interface syntax error in customer-dashboard.ts
+- Added missing eslint-config-prettier dependency
+- Fixed unknown -> Json type casting in 3 files (n8n webhook, log-action, emit-event)
+- Removed @typescript-eslint/no-unused-vars rule reference (ESLint config fix)
+- Fixed 7 raw <a> tags that should have been next/link <Link> components
+- Fixed number | undefined destructuring in booking-flow.ts (noUncheckedIndexedAccess)
+- Fixed 2 repeated-array-index type errors (services[0], providers[0])
+- Added public Supabase client (no cookies/headers dependency) for static generation
+- Made generateStaticParams (categories) fail gracefully instead of crashing the build
+- Made sitemap.ts fail gracefully instead of crashing the build
+
+Delete this file whenever you like — it's just a checkpoint, not part of the app.
