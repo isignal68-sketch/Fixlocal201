@@ -1,0 +1,158 @@
+{
+  "name": "FixLocal - Support Ticket AI Triage",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "fixlocal-events",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "FixLocal Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-40, 300],
+      "webhookId": "fixlocal-events"
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\nconst secret = $env.N8N_WEBHOOK_SECRET;\nconst rawBody = JSON.stringify($input.item.json.body ?? $input.item.json);\nconst signature = $input.item.json.headers['x-fixlocal-signature'];\nconst expected = crypto.createHmac('sha256', secret).update(rawBody, 'utf8').digest('hex');\nconst expectedBuf = Buffer.from(expected, 'hex');\nconst providedBuf = Buffer.from(signature || '', 'hex');\nconst valid = expectedBuf.length === providedBuf.length && crypto.timingSafeEqual(expectedBuf, providedBuf);\nif (!valid) throw new Error('Invalid FixLocal webhook signature');\nreturn $input.item.json.body ?? $input.item.json;"
+      },
+      "id": "verify-signature",
+      "name": "Verify Signature",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [180, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [{ "value1": "={{$json.eventType}}", "value2": "support_ticket.created" }]
+        }
+      },
+      "id": "if-ticket-created",
+      "name": "If: support_ticket.created",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "model": "gpt-4o-mini",
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You triage customer support tickets for a home services marketplace. Given a subject and description, respond with strict JSON: {\"priority\": \"low\"|\"medium\"|\"high\"|\"urgent\", \"suggestedReply\": \"a short, empathetic first-response draft\"}. Urgent = safety issue, payment dispute, or angry churn risk. High = booking about to happen and something's wrong. Medium = general question needing a real answer. Low = feedback/non-urgent."
+            },
+            {
+              "role": "user",
+              "content": "=Subject: {{$json.data.subject}}\\n\\nDescription: {{$json.data.description}}"
+            }
+          ]
+        },
+        "options": { "responseFormat": "json_object" }
+      },
+      "id": "openai-classify",
+      "name": "OpenAI: Classify Ticket",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [660, 220]
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $json.message?.content ?? $json.choices?.[0]?.message?.content ?? '{}';\nconst parsed = JSON.parse(raw);\nreturn { ticketId: $node['Verify Signature'].json.data.ticketId, priority: parsed.priority, suggestedReply: parsed.suggestedReply };"
+      },
+      "id": "parse-classification",
+      "name": "Parse Classification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 220]
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\nconst secret = $env.N8N_INBOUND_SECRET;\nconst body = JSON.stringify({ action: 'classify_support_ticket', payload: { ticketId: $json.ticketId, priority: $json.priority, suggestedReply: $json.suggestedReply } });\nconst signature = crypto.createHmac('sha256', secret).update(body, 'utf8').digest('hex');\nreturn { body, signature };"
+      },
+      "id": "sign-callback",
+      "name": "Sign Callback",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1140, 220]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.FIXLOCAL_APP_URL}}/api/webhooks/n8n",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "X-N8N-Signature", "value": "={{$json.signature}}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "raw",
+        "rawContentType": "application/json",
+        "body": "={{$json.body}}"
+      },
+      "id": "post-classification-back",
+      "name": "Callback: classify_support_ticket",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1380, 220]
+    },
+    {
+      "parameters": {
+        "conditions": { "string": [{ "value1": "={{$node['Parse Classification'].json.priority}}", "value2": "urgent" }] }
+      },
+      "id": "if-urgent",
+      "name": "If: priority = urgent",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1140, 400]
+    },
+    {
+      "parameters": {
+        "channel": "#support-urgent",
+        "text": "=🚨 Urgent support ticket from {{$node['Verify Signature'].json.data.userEmail}}: \"{{$node['Verify Signature'].json.data.subject}}\""
+      },
+      "id": "slack-urgent-alert",
+      "name": "Slack: Urgent Alert",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2,
+      "position": [1380, 400]
+    },
+    {
+      "parameters": { "respondWith": "json", "responseBody": "={{ { received: true } }}" },
+      "id": "respond",
+      "name": "Respond 200",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1620, 300]
+    }
+  ],
+  "connections": {
+    "FixLocal Webhook": { "main": [[{ "node": "Verify Signature", "type": "main", "index": 0 }]] },
+    "Verify Signature": { "main": [[{ "node": "If: support_ticket.created", "type": "main", "index": 0 }]] },
+    "If: support_ticket.created": {
+      "main": [[{ "node": "OpenAI: Classify Ticket", "type": "main", "index": 0 }], [{ "node": "Respond 200", "type": "main", "index": 0 }]]
+    },
+    "OpenAI: Classify Ticket": { "main": [[{ "node": "Parse Classification", "type": "main", "index": 0 }]] },
+    "Parse Classification": {
+      "main": [
+        [
+          { "node": "Sign Callback", "type": "main", "index": 0 },
+          { "node": "If: priority = urgent", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Sign Callback": { "main": [[{ "node": "Callback: classify_support_ticket", "type": "main", "index": 0 }]] },
+    "Callback: classify_support_ticket": { "main": [[{ "node": "Respond 200", "type": "main", "index": 0 }]] },
+    "If: priority = urgent": { "main": [[{ "node": "Slack: Urgent Alert", "type": "main", "index": 0 }], []] },
+    "Slack: Urgent Alert": { "main": [[{ "node": "Respond 200", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" }
+}

@@ -1,0 +1,152 @@
+{
+  "name": "FixLocal - Provider Onboarding & Review Automations",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "fixlocal-events",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "FixLocal Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-40, 300],
+      "webhookId": "fixlocal-events"
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\nconst secret = $env.N8N_WEBHOOK_SECRET;\nconst rawBody = JSON.stringify($input.item.json.body ?? $input.item.json);\nconst signature = $input.item.json.headers['x-fixlocal-signature'];\nconst expected = crypto.createHmac('sha256', secret).update(rawBody, 'utf8').digest('hex');\nconst expectedBuf = Buffer.from(expected, 'hex');\nconst providedBuf = Buffer.from(signature || '', 'hex');\nconst valid = expectedBuf.length === providedBuf.length && crypto.timingSafeEqual(expectedBuf, providedBuf);\nif (!valid) throw new Error('Invalid FixLocal webhook signature');\nreturn $input.item.json.body ?? $input.item.json;"
+      },
+      "id": "verify-signature",
+      "name": "Verify Signature",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [180, 300]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            { "conditions": { "string": [{ "value1": "={{$json.eventType}}", "value2": "provider.registered" }] } },
+            { "conditions": { "string": [{ "value1": "={{$json.eventType}}", "value2": "provider.verification_submitted" }] } },
+            {
+              "conditions": {
+                "boolean": [{ "value1": "={{$json.eventType === 'review.created' && $json.data.rating <= 3}}", "value2": true }]
+              }
+            }
+          ]
+        }
+      },
+      "id": "switch-event-type",
+      "name": "Switch: eventType",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "channel": "#new-providers",
+        "text": "=🎉 New provider signed up: {{$json.data.businessName}} ({{$json.data.city}}, {{$json.data.state}}) — {{$json.data.email}}"
+      },
+      "id": "slack-new-provider",
+      "name": "Slack: New Provider",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2,
+      "position": [700, 140]
+    },
+    {
+      "parameters": {
+        "channel": "#verification-queue",
+        "text": "=📄 {{$json.data.businessName}} submitted a {{$json.data.documentType}} for verification. Review: {{$env.FIXLOCAL_APP_URL}}/admin/providers?status=pending"
+      },
+      "id": "slack-verification-doc",
+      "name": "Slack: Verification Doc Submitted",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2,
+      "position": [700, 300]
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "model": "gpt-4o-mini",
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You draft short, warm, professional replies for a home-service provider responding to a customer review on a marketplace. Never make promises about refunds or discounts. Keep it under 60 words. Respond with plain text only, no JSON."
+            },
+            {
+              "role": "user",
+              "content": "=A customer left a {{$json.data.rating}}-star review: \"{{$json.data.comment}}\". Draft a reply from the provider acknowledging the feedback and inviting them to reach out directly to resolve it."
+            }
+          ]
+        }
+      },
+      "id": "openai-draft-reply",
+      "name": "OpenAI: Draft Review Reply",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [700, 460]
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\nconst secret = $env.N8N_INBOUND_SECRET;\nconst suggestedReply = $json.message?.content ?? $json.choices?.[0]?.message?.content ?? '';\nconst body = JSON.stringify({ action: 'review_reply_suggested', payload: { reviewId: $node['Verify Signature'].json.data.reviewId, suggestedReply } });\nconst signature = crypto.createHmac('sha256', secret).update(body, 'utf8').digest('hex');\nreturn { body, signature };"
+      },
+      "id": "sign-review-callback",
+      "name": "Sign Callback",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [940, 460]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.FIXLOCAL_APP_URL}}/api/webhooks/n8n",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "X-N8N-Signature", "value": "={{$json.signature}}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "raw",
+        "rawContentType": "application/json",
+        "body": "={{$json.body}}"
+      },
+      "id": "post-suggestion-back",
+      "name": "Callback: review_reply_suggested",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1180, 460]
+    },
+    {
+      "parameters": { "respondWith": "json", "responseBody": "={{ { received: true } }}" },
+      "id": "respond",
+      "name": "Respond 200",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1420, 300]
+    }
+  ],
+  "connections": {
+    "FixLocal Webhook": { "main": [[{ "node": "Verify Signature", "type": "main", "index": 0 }]] },
+    "Verify Signature": { "main": [[{ "node": "Switch: eventType", "type": "main", "index": 0 }]] },
+    "Switch: eventType": {
+      "main": [
+        [{ "node": "Slack: New Provider", "type": "main", "index": 0 }],
+        [{ "node": "Slack: Verification Doc Submitted", "type": "main", "index": 0 }],
+        [{ "node": "OpenAI: Draft Review Reply", "type": "main", "index": 0 }]
+      ]
+    },
+    "Slack: New Provider": { "main": [[{ "node": "Respond 200", "type": "main", "index": 0 }]] },
+    "Slack: Verification Doc Submitted": { "main": [[{ "node": "Respond 200", "type": "main", "index": 0 }]] },
+    "OpenAI: Draft Review Reply": { "main": [[{ "node": "Sign Callback", "type": "main", "index": 0 }]] },
+    "Sign Callback": { "main": [[{ "node": "Callback: review_reply_suggested", "type": "main", "index": 0 }]] },
+    "Callback: review_reply_suggested": { "main": [[{ "node": "Respond 200", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" }
+}

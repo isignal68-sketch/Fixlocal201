@@ -1,0 +1,152 @@
+{
+  "name": "FixLocal - Booking Lifecycle",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "fixlocal-events",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "FixLocal Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-40, 300],
+      "webhookId": "fixlocal-events"
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\n\nconst secret = $env.N8N_WEBHOOK_SECRET;\nconst rawBody = JSON.stringify($input.item.json.body ?? $input.item.json);\nconst signature = $input.item.json.headers['x-fixlocal-signature'];\n\nconst expected = crypto.createHmac('sha256', secret).update(rawBody, 'utf8').digest('hex');\n\nconst expectedBuf = Buffer.from(expected, 'hex');\nconst providedBuf = Buffer.from(signature || '', 'hex');\n\nconst valid =\n  expectedBuf.length === providedBuf.length &&\n  crypto.timingSafeEqual(expectedBuf, providedBuf);\n\nif (!valid) {\n  throw new Error('Invalid FixLocal webhook signature');\n}\n\nreturn $input.item.json.body ?? $input.item.json;"
+      },
+      "id": "verify-signature",
+      "name": "Verify Signature",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [180, 300]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            { "conditions": { "string": [{ "value1": "={{$json.eventType}}", "value2": "booking.accepted" }] } },
+            { "conditions": { "string": [{ "value1": "={{$json.eventType}}", "value2": "booking.completed" }] } },
+            { "conditions": { "string": [{ "value1": "={{$json.eventType}}", "value2": "booking.cancelled" }] } }
+          ]
+        }
+      },
+      "id": "switch-event-type",
+      "name": "Switch: eventType",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "twilioApi",
+        "from": "={{$env.TWILIO_FROM_NUMBER}}",
+        "to": "={{$json.data.customerPhone}}",
+        "message": "=Hi {{$json.data.customerName}}, your {{$json.data.serviceTitle}} booking with {{$json.data.providerName}} is confirmed for {{$json.data.scheduledAt}}. — FixLocal"
+      },
+      "id": "twilio-accepted-sms",
+      "name": "Twilio: Booking Confirmed SMS",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [700, 120]
+    },
+    {
+      "parameters": {
+        "resource": "event",
+        "operation": "create",
+        "calendarId": "={{$json.data.providerEmail}}",
+        "start": "={{$json.data.scheduledAt}}",
+        "end": "={{$json.data.scheduledAt}}",
+        "summary": "=FixLocal: {{$json.data.serviceTitle}} — {{$json.data.customerName}}",
+        "additionalFields": {
+          "location": "={{$json.data.addressLine1 + ', ' + $json.data.city + ', ' + $json.data.state}}",
+          "description": "=Booking ID: {{$json.data.bookingId}}\\nCustomer: {{$json.data.customerName}} ({{$json.data.customerPhone}})"
+        }
+      },
+      "id": "gcal-create-event",
+      "name": "Google Calendar: Create Event",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1,
+      "position": [700, 260]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.FIXLOCAL_APP_URL}}/api/webhooks/n8n",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "X-N8N-Signature", "value": "={{$json.signature}}" }]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ action: 'calendar_event_linked', payload: { bookingId: $json.data.bookingId, googleCalendarEventId: $node['Google Calendar: Create Event'].json.id } }) }}"
+      },
+      "id": "callback-calendar-linked",
+      "name": "Callback: calendar_event_linked",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [940, 260]
+    },
+    {
+      "parameters": {
+        "authentication": "twilioApi",
+        "from": "={{$env.TWILIO_FROM_NUMBER}}",
+        "to": "={{$json.data.customerPhone}}",
+        "message": "=Your {{$json.data.serviceTitle}} job with {{$json.data.providerName}} is complete! Rate your experience: {{$env.FIXLOCAL_APP_URL}}/dashboard/bookings/{{$json.data.bookingId}}?review=1"
+      },
+      "id": "twilio-completed-sms",
+      "name": "Twilio: Job Complete SMS",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [700, 400]
+    },
+    {
+      "parameters": {
+        "authentication": "twilioApi",
+        "from": "={{$env.TWILIO_FROM_NUMBER}}",
+        "to": "={{$json.data.providerEmail}}",
+        "message": "=Heads up — a booking was cancelled: {{$json.data.serviceTitle}} with {{$json.data.customerName}}, reason: {{$json.data.reason || 'not specified'}}"
+      },
+      "id": "twilio-cancelled-sms",
+      "name": "Twilio: Cancellation Alert",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [700, 540]
+    },
+    {
+      "parameters": { "respondWith": "json", "responseBody": "={{ { received: true } }}" },
+      "id": "respond",
+      "name": "Respond 200",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1180, 300]
+    }
+  ],
+  "connections": {
+    "FixLocal Webhook": { "main": [[{ "node": "Verify Signature", "type": "main", "index": 0 }]] },
+    "Verify Signature": { "main": [[{ "node": "Switch: eventType", "type": "main", "index": 0 }]] },
+    "Switch: eventType": {
+      "main": [
+        [
+          { "node": "Twilio: Booking Confirmed SMS", "type": "main", "index": 0 },
+          { "node": "Google Calendar: Create Event", "type": "main", "index": 0 }
+        ],
+        [{ "node": "Twilio: Job Complete SMS", "type": "main", "index": 0 }],
+        [{ "node": "Twilio: Cancellation Alert", "type": "main", "index": 0 }]
+      ]
+    },
+    "Google Calendar: Create Event": {
+      "main": [[{ "node": "Callback: calendar_event_linked", "type": "main", "index": 0 }]]
+    },
+    "Twilio: Booking Confirmed SMS": { "main": [[{ "node": "Respond 200", "type": "main", "index": 0 }]] },
+    "Callback: calendar_event_linked": { "main": [[{ "node": "Respond 200", "type": "main", "index": 0 }]] },
+    "Twilio: Job Complete SMS": { "main": [[{ "node": "Respond 200", "type": "main", "index": 0 }]] },
+    "Twilio: Cancellation Alert": { "main": [[{ "node": "Respond 200", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" }
+}
