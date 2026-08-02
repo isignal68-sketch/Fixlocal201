@@ -56,6 +56,7 @@ export default async function ProviderPage({ params }: ProviderPageProps) {
     getProviderReviews(provider.id),
     getCurrentUser(),
   ]);
+  const firstService = services[0];
 
   let isFavorited = false;
   if (user) {
@@ -226,7 +227,7 @@ export default async function ProviderPage({ params }: ProviderPageProps) {
                 Pick a service to see availability and pricing.
               </p>
               <Button asChild className="mt-4 w-full" size="lg">
-                <Link href={services[0] ? `/book/${provider.slug}/${services[0].slug}` : '#'}>
+                <Link href={firstService ? `/book/${provider.slug}/${firstService.slug}` : '#'}>
                   Book now
                 </Link>
               </Button>

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/server';
 import { verifySignature } from '@/lib/automation/signing';
+import type { Json } from '@/types/supabase';
 
 export const runtime = 'nodejs';
 
@@ -130,7 +131,7 @@ export async function POST(request: Request) {
   if (!action || !(action in inboundActionSchemas)) {
     await supabase.from('automation_inbound_events').insert({
       action: action ?? 'unknown',
-      payload: parsed.payload ?? {},
+      payload: (parsed.payload ?? {}) as Json,
       processed: false,
       error_message: 'Unrecognized action',
       source_ip: sourceIp,
@@ -143,7 +144,7 @@ export async function POST(request: Request) {
 
     await supabase.from('automation_inbound_events').insert({
       action,
-      payload: parsed.payload ?? {},
+      payload: (parsed.payload ?? {}) as Json,
       processed: result.ok,
       error_message: result.ok ? null : (result.message ?? 'Unknown error'),
       source_ip: sourceIp,
@@ -159,7 +160,7 @@ export async function POST(request: Request) {
 
     await supabase.from('automation_inbound_events').insert({
       action,
-      payload: parsed.payload ?? {},
+      payload: (parsed.payload ?? {}) as Json,
       processed: false,
       error_message: message,
       source_ip: sourceIp,

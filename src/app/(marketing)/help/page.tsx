@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { HelpFaqAccordion } from '@/components/shared/help-faq-accordion';
 import { siteConfig } from '@/lib/site-config';
 
@@ -14,9 +15,9 @@ export default function HelpPage() {
       <h1 className="font-display text-4xl font-bold">Help center</h1>
       <p className="mt-4 text-muted-foreground">
         Answers to common questions. Can&apos;t find what you need?{' '}
-        <a href="/contact" className="text-primary hover:underline">
+        <Link href="/contact" className="text-primary hover:underline">
           Contact us
-        </a>
+        </Link>
         .
       </p>
 

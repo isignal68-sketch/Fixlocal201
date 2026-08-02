@@ -56,11 +56,12 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     return `/search?${p.toString()}`;
   }
 
+  const firstProvider = providers[0];
   const mapCenter =
     params.lat && params.lng
       ? { lat: Number(params.lat), lng: Number(params.lng) }
-      : providers[0]?.base_latitude && providers[0]?.base_longitude
-        ? { lat: providers[0].base_latitude, lng: providers[0].base_longitude }
+      : firstProvider?.base_latitude && firstProvider?.base_longitude
+        ? { lat: firstProvider.base_latitude, lng: firstProvider.base_longitude }
         : { lat: 39.8283, lng: -98.5795 }; // continental US center fallback
 
   const providersWithDistance = providers.map((p) => ({

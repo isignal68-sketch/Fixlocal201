@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { CreditCard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { PaymentMethodRow } from '@/types/database';
@@ -18,9 +19,9 @@ export function PaymentMethodSelector({
     return (
       <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
         No saved payment method.{' '}
-        <a href="/dashboard/settings/payment-methods" className="text-primary hover:underline">
+        <Link href="/dashboard/settings/payment-methods" className="text-primary hover:underline">
           Add a card
-        </a>{' '}
+        </Link>{' '}
         before booking.
       </p>
     );

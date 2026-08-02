@@ -4,22 +4,23 @@ FixLocal — build verification file
 If you can see this file after unzipping, you have successfully downloaded
 the correct, current version of the project.
 
-Build stamp: 2026-08-02 (v11)
-Version tag: v11-button-slot-fix
+Build stamp: 2026-08-02 (v12)
+Version tag: v13-CONFIRMED-slotProps-fix
 
 Quick way to confirm you have THIS exact version: open
-src/components/ui/button.tsx and look for "React.Children.only" in a
-comment near the top of the component body. If it's there, you have the
-current build.
+src/components/ui/button.tsx and look for "slotProps" near the middle of
+the file. If it's there, you have the current build.
 
-Latest fix (this build): the shared <Button asChild> component was passing
-two children to Radix's <Slot> (a conditional loading spinner plus the
-actual child) even when not loading — Slot requires exactly one child and
-throws "React.Children.only expected to receive a single React element
-child" (shown in production as minified React error #143) otherwise. This
-was a foundational bug affecting every asChild usage across the app, not a
-page-specific issue — it's what was crashing Next's automatic /_not-found
-page during static generation.
+Latest fix (this build): v11's fix for the React.Children.only crash
+re-introduced `disabled` as a literal JSX attribute on <Slot>, which caused
+a genuine TypeScript type error ("Property 'disabled' does not exist on
+type...") because Slot's declared prop type is generic
+HTMLAttributes<HTMLElement>, which doesn't include `disabled` (that's
+specific to form elements). Fixed by merging `disabled` into a single
+type-asserted spread object instead of a literal attribute — Slot still
+forwards it correctly onto whatever the actual child element is at
+runtime; only the *literal, individually-checked* JSX attribute was the
+problem.
 
 IMPORTANT — read this if your build is still failing with
 "Error: supabaseUrl is required.":
@@ -52,6 +53,7 @@ Fixes included as of this build:
 - Made sitemap.ts fail gracefully instead of crashing the build
 - Hardened all 4 Supabase client constructors to never throw on missing env vars
 - Fixed React.Children.only crash in Button's asChild/Slot handling (affected every asChild usage app-wide)
+- Fixed the disabled-on-Slot TypeScript type error introduced by the previous fix
 
 Delete this file whenever you like — it's just a checkpoint, not part of the app.
 

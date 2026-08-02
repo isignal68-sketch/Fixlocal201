@@ -42,9 +42,36 @@ export interface ButtonProps
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, isLoading = false, children, disabled, ...props }, ref) => {
-    const Comp = asChild ? Slot : 'button';
+    if (asChild) {
+      // Radix Slot requires exactly one React element child (it calls
+      // React.Children.only() internally). Passing the conditional loading
+      // spinner alongside {children} here — even when isLoading is false —
+      // makes children an array of two entries and throws
+      // "React.Children.only expected to receive a single React element
+      // child" (minified as React error #143). asChild callers are
+      // responsible for their own loading affordance if needed.
+      //
+      // `disabled` is intentionally merged into a single cast spread object
+      // rather than written as a literal JSX attribute: Slot's declared prop
+      // type is based on generic HTMLAttributes<HTMLElement>, which has no
+      // `disabled` (that's specific to form elements like
+      // ButtonHTMLAttributes). Slot forwards whatever props it receives onto
+      // the actual child at runtime regardless of what TypeScript statically
+      // knows that child's element type to be, so this is safe.
+      const slotProps = {
+        ...props,
+        disabled: disabled || isLoading,
+      } as React.ComponentPropsWithoutRef<typeof Slot>;
+
+      return (
+        <Slot className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...slotProps}>
+          {children}
+        </Slot>
+      );
+    }
+
     return (
-      <Comp
+      <button
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
         disabled={disabled || isLoading}
@@ -52,7 +79,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       >
         {isLoading && <Loader2 className="animate-spin" />}
         {children}
-      </Comp>
+      </button>
     );
   }
 );
