@@ -42,9 +42,28 @@ export interface ButtonProps
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, isLoading = false, children, disabled, ...props }, ref) => {
-    const Comp = asChild ? Slot : 'button';
+    if (asChild) {
+      // Radix Slot requires exactly one React element child (it calls
+      // React.Children.only() internally). Passing the conditional loading
+      // spinner alongside {children} here — even when isLoading is false —
+      // makes children an array of two entries and throws
+      // "React.Children.only expected to receive a single React element
+      // child" (minified as React error #143). asChild callers are
+      // responsible for their own loading affordance if needed.
+      return (
+        <Slot
+          className={cn(buttonVariants({ variant, size, className }))}
+          ref={ref}
+          disabled={disabled || isLoading}
+          {...props}
+        >
+          {children}
+        </Slot>
+      );
+    }
+
     return (
-      <Comp
+      <button
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
         disabled={disabled || isLoading}
@@ -52,7 +71,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       >
         {isLoading && <Loader2 className="animate-spin" />}
         {children}
-      </Comp>
+      </button>
     );
   }
 );

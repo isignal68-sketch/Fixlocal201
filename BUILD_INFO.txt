@@ -4,12 +4,22 @@ FixLocal — build verification file
 If you can see this file after unzipping, you have successfully downloaded
 the correct, current version of the project.
 
-Build stamp: 2026-07-30 13:45 UTC
-Version tag: v10-supabase-client-hardening
+Build stamp: 2026-08-02 (v11)
+Version tag: v11-button-slot-fix
 
 Quick way to confirm you have THIS exact version: open
-src/lib/supabase/public.ts and look for "placeholder.supabase.co" near the
-top of the file. If it's there, you have the current build.
+src/components/ui/button.tsx and look for "React.Children.only" in a
+comment near the top of the component body. If it's there, you have the
+current build.
+
+Latest fix (this build): the shared <Button asChild> component was passing
+two children to Radix's <Slot> (a conditional loading spinner plus the
+actual child) even when not loading — Slot requires exactly one child and
+throws "React.Children.only expected to receive a single React element
+child" (shown in production as minified React error #143) otherwise. This
+was a foundational bug affecting every asChild usage across the app, not a
+page-specific issue — it's what was crashing Next's automatic /_not-found
+page during static generation.
 
 IMPORTANT — read this if your build is still failing with
 "Error: supabaseUrl is required.":
@@ -41,6 +51,7 @@ Fixes included as of this build:
 - Made generateStaticParams (categories) fail gracefully instead of crashing the build
 - Made sitemap.ts fail gracefully instead of crashing the build
 - Hardened all 4 Supabase client constructors to never throw on missing env vars
+- Fixed React.Children.only crash in Button's asChild/Slot handling (affected every asChild usage app-wide)
 
 Delete this file whenever you like — it's just a checkpoint, not part of the app.
 
