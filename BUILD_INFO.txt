@@ -4,15 +4,29 @@ FixLocal — build verification file
 If you can see this file after unzipping, you have successfully downloaded
 the correct, current version of the project.
 
-Build stamp: 2026-07-30 13:24 UTC
-Version tag: v9-sitemap-resilience-fix
+Build stamp: 2026-07-30 13:45 UTC
+Version tag: v10-supabase-client-hardening
 
-Quick way to confirm you have THIS exact version before creating a GitHub
-repo or deploying: open src/app/sitemap.ts and look for the word "try"
-appearing right after the staticRoutes array is defined (around line 22).
-If it's there, you have the current build. If it's missing, something went
-wrong in the download/unzip step and you should re-download the zip from
-the chat rather than reuse a file already sitting on your device.
+Quick way to confirm you have THIS exact version: open
+src/lib/supabase/public.ts and look for "placeholder.supabase.co" near the
+top of the file. If it's there, you have the current build.
+
+IMPORTANT — read this if your build is still failing with
+"Error: supabaseUrl is required.":
+This build changes the fix strategy. Instead of wrapping individual pages
+in try/catch one at a time (categories, sitemap, etc. — which kept
+resurfacing on new pages like Next's internal /_not-found route), all four
+Supabase client constructors (browser, server, admin, public, and
+middleware) now fall back to a harmless placeholder URL/key if the real
+environment variables are missing, instead of throwing synchronously. This
+means the BUILD should now succeed regardless of whether your Supabase env
+vars are configured in Vercel — but if they're genuinely not set, the
+DEPLOYED SITE will still not work correctly at runtime (auth, search,
+bookings, everything touching the database will fail). A green build is
+not the same as a working app. Please still verify in Vercel → Settings →
+Environment Variables that NEXT_PUBLIC_SUPABASE_URL,
+NEXT_PUBLIC_SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY are all set
+for the Production environment.
 
 Fixes included as of this build:
 - React 19 -> 18.3.1 (dependency conflict fix)
@@ -26,5 +40,7 @@ Fixes included as of this build:
 - Added public Supabase client (no cookies/headers dependency) for static generation
 - Made generateStaticParams (categories) fail gracefully instead of crashing the build
 - Made sitemap.ts fail gracefully instead of crashing the build
+- Hardened all 4 Supabase client constructors to never throw on missing env vars
 
 Delete this file whenever you like — it's just a checkpoint, not part of the app.
+
