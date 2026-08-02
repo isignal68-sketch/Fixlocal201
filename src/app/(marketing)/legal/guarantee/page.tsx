@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { ShieldCheck, RotateCcw, BadgeCheck } from 'lucide-react';
 import { siteConfig } from '@/lib/site-config';
 
@@ -51,9 +50,9 @@ export default function GuaranteePage() {
       <p className="mt-10 text-sm text-muted-foreground">
         The FixLocal Guarantee applies to bookings made and paid for through the platform. Work
         arranged or paid for outside FixLocal is not covered. See our{' '}
-        <Link href="/legal/terms" className="text-primary hover:underline">
+        <a href="/legal/terms" className="text-primary hover:underline">
           Terms of Service
-        </Link>{' '}
+        </a>{' '}
         for full details.
       </p>
     </div>

@@ -11,18 +11,8 @@ interface CategoryPageProps {
 }
 
 export async function generateStaticParams() {
-  try {
-    const categories = await getActiveCategories();
-    return categories.map((category) => ({ slug: category.slug }));
-  } catch (error) {
-    // If Supabase env vars aren't available at build time (or the DB is
-    // briefly unreachable), don't fail the entire build over pre-rendering
-    // an SEO optimization — fall back to zero statically generated category
-    // pages. `dynamicParams` defaults to true, so every category page still
-    // renders correctly on first request; it just isn't pre-built.
-    console.warn('generateStaticParams (categories) failed, falling back to on-demand rendering:', error);
-    return [];
-  }
+  const categories = await getActiveCategories();
+  return categories.map((category) => ({ slug: category.slug }));
 }
 
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {

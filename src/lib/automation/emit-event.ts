@@ -1,7 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/server';
 import { signPayload } from '@/lib/automation/signing';
 import type { AutomationEventPayloadMap, AutomationEventType } from '@/lib/automation/event-types';
-import type { Json } from '@/types/supabase';
 
 const DELIVERY_TIMEOUT_MS = 5000;
 const MAX_ATTEMPTS = 6;
@@ -35,7 +34,7 @@ export async function emitAutomationEvent<T extends AutomationEventType>(
       .from('automation_events')
       .insert({
         event_type: eventType,
-        payload: payload as unknown as Json,
+        payload,
         idempotency_key: options.idempotencyKey ?? null,
         max_attempts: MAX_ATTEMPTS,
       })
@@ -130,7 +129,7 @@ export async function deliverEvent(
     event_id: eventId,
     attempt_number: attemptNumber,
     target_url: webhookUrl,
-    request_headers: headers as unknown as Json,
+    request_headers: headers,
     response_status: responseStatus,
     response_body: responseBody || null,
     duration_ms: durationMs,

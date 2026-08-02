@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
@@ -206,13 +205,13 @@ export function SignUpForm() {
               <div className="leading-tight">
                 <FormLabel className="font-normal">
                   I agree to the{' '}
-                  <Link href="/legal/terms" className="text-primary hover:underline">
+                  <a href="/legal/terms" className="text-primary hover:underline">
                     Terms of Service
-                  </Link>{' '}
+                  </a>{' '}
                   and{' '}
-                  <Link href="/legal/privacy" className="text-primary hover:underline">
+                  <a href="/legal/privacy" className="text-primary hover:underline">
                     Privacy Policy
-                  </Link>
+                  </a>
                 </FormLabel>
                 <FormMessage />
               </div>

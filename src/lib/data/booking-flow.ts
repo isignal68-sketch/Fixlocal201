@@ -88,8 +88,8 @@ export async function getAvailableSlots(
     const dayAvailability = availabilityByDay.get(dayOfWeek);
     if (!dayAvailability) continue;
 
-    const [startHour = 0, startMin = 0] = dayAvailability.start_time.split(':').map(Number);
-    const [endHour = 0, endMin = 0] = dayAvailability.end_time.split(':').map(Number);
+    const [startHour, startMin] = dayAvailability.start_time.split(':').map(Number);
+    const [endHour, endMin] = dayAvailability.end_time.split(':').map(Number);
 
     const dayStart = new Date(day);
     dayStart.setHours(startHour, startMin, 0, 0);

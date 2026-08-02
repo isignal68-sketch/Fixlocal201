@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server';
-import type { Json } from '@/types/supabase';
 
 export async function logAdminAction(
   action: string,
@@ -19,6 +18,6 @@ export async function logAdminAction(
     action,
     target_table: targetTable ?? null,
     target_id: targetId ?? null,
-    metadata: (metadata ?? null) as Json | null,
+    metadata: metadata ?? null,
   });
 }

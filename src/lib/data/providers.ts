@@ -1,8 +1,8 @@
-import { createPublicClient } from '@/lib/supabase/public';
+import { createClient } from '@/lib/supabase/server';
 import type { CategoryRow, ProviderRow } from '@/types/database';
 
 export async function getActiveCategories(): Promise<CategoryRow[]> {
-  const supabase = createPublicClient();
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from('categories')
     .select('*')
@@ -18,7 +18,7 @@ export async function getActiveCategories(): Promise<CategoryRow[]> {
 }
 
 export async function getCategoryBySlug(slug: string): Promise<CategoryRow | null> {
-  const supabase = createPublicClient();
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from('categories')
     .select('*')
@@ -35,7 +35,7 @@ export interface ProviderWithDistance extends ProviderRow {
 }
 
 export async function getFeaturedProviders(limit = 8): Promise<ProviderRow[]> {
-  const supabase = createPublicClient();
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from('providers')
     .select('*')
@@ -53,7 +53,7 @@ export async function getFeaturedProviders(limit = 8): Promise<ProviderRow[]> {
 }
 
 export async function getTopRatedProviders(limit = 8): Promise<ProviderRow[]> {
-  const supabase = createPublicClient();
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from('providers')
     .select('*')
@@ -72,7 +72,7 @@ export async function getTopRatedProviders(limit = 8): Promise<ProviderRow[]> {
 }
 
 export async function getProviderBySlug(slug: string): Promise<ProviderRow | null> {
-  const supabase = createPublicClient();
+  const supabase = await createClient();
   const { data, error } = await supabase.from('providers').select('*').eq('slug', slug).single();
 
   if (error) return null;
@@ -103,7 +103,7 @@ export interface SearchProvidersResult {
 export async function searchProviders(
   params: SearchProvidersParams
 ): Promise<SearchProvidersResult> {
-  const supabase = createPublicClient();
+  const supabase = await createClient();
   const page = params.page ?? 1;
   const perPage = params.perPage ?? 12;
   const from = (page - 1) * perPage;
