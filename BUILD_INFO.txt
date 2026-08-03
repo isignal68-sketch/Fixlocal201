@@ -4,27 +4,27 @@ FixLocal — build verification file
 If you can see this file after unzipping, you have successfully downloaded
 the correct, current version of the project.
 
-Build stamp: 2026-08-02 (v14)
-Version tag: v14-suspense-boundary-fix
+Build stamp: 2026-08-03 (v15)
+Version tag: v15-nextjs-cve-patch
 
-Quick way to confirm you have THIS exact version: open
-src/app/(auth)/login/page.tsx and look for "Suspense" — it should be
-imported from 'react' and wrap <SignInForm />.
+Quick way to confirm you have THIS exact version: open package.json and
+look for "next": "15.0.5" (not 15.0.3).
 
-Latest fix (this build): the Button/Slot fix from v12/v13 is confirmed
-working — the build got past compiling and all the way to "Generating
-static pages (60/81)" before hitting a new, different, well-documented
-Next.js error: "useSearchParams() should be wrapped in a suspense
-boundary", failing on /login. SignInForm and SignUpForm both call
-useSearchParams() (to read ?redirect= and ?role=), and neither the login
-nor signup page wrapped them in <Suspense>. Since the (auth) layout has no
-cookies()/auth check forcing it dynamic, Next tried to statically
-prerender both pages and correctly refused without a Suspense boundary.
-Fixed both. Checked every other useSearchParams() consumer in the app
-(search filters, admin tables, booking filters) and confirmed they're
-already safe because their pages sit under layouts that call
-getCurrentUser() (cookies()-based), which forces the whole route dynamic
-and skips static generation entirely — so only login/signup needed this.
+Latest fix (this build): the actual Next.js build now succeeds completely
+end to end — compiles, lints, type-checks, generates all 81 static pages,
+and reaches "Build Completed" / "Deploying outputs...". The deployment was
+still failing because next@15.0.3 has a critical (CVSS 10.0) remote code
+execution vulnerability, CVE-2025-66478, affecting the React Server
+Components protocol in Next.js 15.x versions below 15.4.8. Vercel's
+platform-level security policy blocks deploys of versions affected by
+certain critical CVEs, which is very likely why the log showed "Vulnerable
+version of Next.js detected, please update immediately" as the last line
+before failure. Upgraded next and eslint-config-next from 15.0.3 to
+15.0.5 — the minimal patched release in the same 15.0.x line, chosen to
+keep this change as small as possible rather than jumping to a later
+minor version. This does not change React (still 18.3.1) or any other
+dependency, and Next 15.0.5's peer dependency requirements are identical
+to 15.0.3's.
 
 Quick way to confirm you have THIS exact version: open
 src/components/ui/button.tsx and look for "slotProps" near the middle of
@@ -74,6 +74,7 @@ Fixes included as of this build:
 - Fixed React.Children.only crash in Button's asChild/Slot handling (affected every asChild usage app-wide)
 - Fixed the disabled-on-Slot TypeScript type error introduced by the previous fix
 - Wrapped SignInForm/SignUpForm in Suspense to fix "useSearchParams() should be wrapped in a suspense boundary" on /login and /signup
+- Upgraded next + eslint-config-next from 15.0.3 to 15.0.5 to patch CVE-2025-66478 (critical RCE)
 
 Delete this file whenever you like — it's just a checkpoint, not part of the app.
 
