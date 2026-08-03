@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { SignUpForm } from '@/components/shared/sign-up-form';
 import { SocialAuthButtons } from '@/components/shared/social-auth-buttons';
@@ -21,7 +22,9 @@ export default function SignUpPage() {
           <span className="text-xs uppercase text-muted-foreground">or</span>
           <Separator className="flex-1" />
         </div>
-        <SignUpForm />
+        <Suspense fallback={null}>
+          <SignUpForm />
+        </Suspense>
       </div>
 
       <p className="mt-8 text-center text-sm text-muted-foreground">

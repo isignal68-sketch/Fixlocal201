@@ -4,8 +4,27 @@ FixLocal — build verification file
 If you can see this file after unzipping, you have successfully downloaded
 the correct, current version of the project.
 
-Build stamp: 2026-08-02 (v12)
-Version tag: v13-CONFIRMED-slotProps-fix
+Build stamp: 2026-08-02 (v14)
+Version tag: v14-suspense-boundary-fix
+
+Quick way to confirm you have THIS exact version: open
+src/app/(auth)/login/page.tsx and look for "Suspense" — it should be
+imported from 'react' and wrap <SignInForm />.
+
+Latest fix (this build): the Button/Slot fix from v12/v13 is confirmed
+working — the build got past compiling and all the way to "Generating
+static pages (60/81)" before hitting a new, different, well-documented
+Next.js error: "useSearchParams() should be wrapped in a suspense
+boundary", failing on /login. SignInForm and SignUpForm both call
+useSearchParams() (to read ?redirect= and ?role=), and neither the login
+nor signup page wrapped them in <Suspense>. Since the (auth) layout has no
+cookies()/auth check forcing it dynamic, Next tried to statically
+prerender both pages and correctly refused without a Suspense boundary.
+Fixed both. Checked every other useSearchParams() consumer in the app
+(search filters, admin tables, booking filters) and confirmed they're
+already safe because their pages sit under layouts that call
+getCurrentUser() (cookies()-based), which forces the whole route dynamic
+and skips static generation entirely — so only login/signup needed this.
 
 Quick way to confirm you have THIS exact version: open
 src/components/ui/button.tsx and look for "slotProps" near the middle of
@@ -54,6 +73,7 @@ Fixes included as of this build:
 - Hardened all 4 Supabase client constructors to never throw on missing env vars
 - Fixed React.Children.only crash in Button's asChild/Slot handling (affected every asChild usage app-wide)
 - Fixed the disabled-on-Slot TypeScript type error introduced by the previous fix
+- Wrapped SignInForm/SignUpForm in Suspense to fix "useSearchParams() should be wrapped in a suspense boundary" on /login and /signup
 
 Delete this file whenever you like — it's just a checkpoint, not part of the app.
 
