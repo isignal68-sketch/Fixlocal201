@@ -97,9 +97,11 @@ export async function signInAction(input: SignInInput): Promise<AuthActionResult
   });
 
   if (error) {
+    console.error('[auth] signInWithPassword failed for', parsed.data.email, '-', error.message);
     return { success: false, message: 'Incorrect email or password.' };
   }
 
+  console.log('[auth] sign-in succeeded for', parsed.data.email);
   return { success: true };
 }
 
@@ -168,6 +170,7 @@ export async function signInWithGoogleAction() {
   });
 
   if (error || !data.url) {
+    console.error('[auth] Google OAuth init failed:', error?.message ?? 'no redirect url returned');
     redirect('/login?error=oauth_failed');
   }
 
@@ -186,6 +189,7 @@ export async function signInWithAppleAction() {
   });
 
   if (error || !data.url) {
+    console.error('[auth] Apple OAuth init failed:', error?.message ?? 'no redirect url returned');
     redirect('/login?error=oauth_failed');
   }
 
