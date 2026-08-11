@@ -93,8 +93,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${lexend.variable} font-sans`}>
         <ThemeProvider>
-          {children}
-          <Toaster position="top-center" richColors closeButton />
+          <div>
+            {children}
+            <Toaster position="top-center" richColors closeButton />
+          </div>
         </ThemeProvider>
       </body>
     </html>
