@@ -9,7 +9,8 @@ export const siteConfig = {
     facebook: 'https://facebook.com/fixlocal',
     linkedin: 'https://linkedin.com/company/fixlocal',
   },
-  supportEmail: 'support@fixlocal.com',
+  supportEmail:supportEmail: 'fixlocal614@gmail.com',
+
   commissionPercent: Number(process.env.NEXT_PUBLIC_APP_FEE_PERCENT ?? 15),
 } as const;
 
