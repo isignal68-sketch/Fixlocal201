@@ -1,55 +1,79 @@
 import type { Metadata } from 'next';
-import { HeroSection } from '@/components/shared/hero-section';
-import { CategoriesSection } from '@/components/shared/categories-section';
-import {
-  FeaturedProvidersSection,
-  TopRatedProvidersSection,
-} from '@/components/shared/provider-sections';
-import { HowItWorksSection } from '@/components/shared/how-it-works-section';
-import { TestimonialsSection } from '@/components/shared/testimonials-section';
-import { CtaSection } from '@/components/shared/cta-section';
-import { getActiveCategories, getFeaturedProviders, getTopRatedProviders } from '@/lib/data/providers';
+import Link from 'next/link';
+import { CheckCircle2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { siteConfig } from '@/lib/site-config';
+import { getCurrentUser } from '@/lib/auth/get-current-user';
 
 export const metadata: Metadata = {
-  title: 'FixLocal — Book trusted local service pros near you',
-  alternates: { canonical: siteConfig.url },
+  title: 'Join FixLocal as a provider',
+  description: 'Sign up to list your service business on FixLocal and start getting booked.',
+  alternates: { canonical: `${siteConfig.url}/pro/join` },
 };
 
-export const revalidate = 3600;
+const checklist = [
+  'Create your free account',
+  'Add your business details and services',
+  'Upload license & insurance for verification',
+  'Set your availability and service area',
+  'Start receiving bookings',
+];
 
-export default async function HomePage() {
-  const [categories, featuredProviders, topRatedProviders] = await Promise.all([
-    getActiveCategories(),
-    getFeaturedProviders(),
-    getTopRatedProviders(),
-  ]);
+export default async function ProJoinPage() {
+  const user = await getCurrentUser();
 
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'WebSite',
-    name: siteConfig.name,
-    url: siteConfig.url,
-    potentialAction: {
-      '@type': 'SearchAction',
-      target: `${siteConfig.url}/search?q={search_term_string}`,
-      'query-input': 'required name=search_term_string',
-    },
-  };
+  // Logged-in users (customer or otherwise) go straight to the provider
+  // onboarding form on their existing account — /pro/onboarding already
+  // handles "already a provider? redirect to dashboard" internally.
+  // Logged-out visitors go through signup first, then land in onboarding.
+  const ctaHref = user ? '/pro/onboarding' : '/signup?role=provider';
+  const ctaLabel = user ? 'Set up your provider profile' : 'Create provider account';
 
   return (
-    <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
-      <HeroSection />
-      <CategoriesSection categories={categories} />
-      <FeaturedProvidersSection providers={featuredProviders} />
-      <HowItWorksSection />
-      <TopRatedProvidersSection providers={topRatedProviders} />
-      <TestimonialsSection />
-      <CtaSection />
-    </>
+    <div className="container py-16">
+      <div className="mx-auto grid max-w-4xl grid-cols-1 gap-12 lg:grid-cols-2">
+        <div>
+          <h1 className="font-display text-3xl font-bold sm:text-4xl">
+            List your business on FixLocal
+          </h1>
+          <p className="mt-4 text-muted-foreground">
+            Join in minutes and start reaching customers actively searching for your services.
+            It&apos;s free to get started.
+          </p>
+
+          <ul className="mt-8 space-y-3">
+            {checklist.map((item) => (
+              <li key={item} className="flex items-start gap-3">
+                <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-accent" />
+                <span className="text-sm">{item}</span>
+              </li>
+            ))}
+          </ul>
+
+          <Button asChild size="lg" className="mt-8">
+            <Link href={ctaHref}>{ctaLabel}</Link>
+          </Button>
+
+          {!user && (
+            <p className="mt-3 text-sm text-muted-foreground">
+              Already have an account?{' '}
+              <Link href="/login?redirect=/pro/onboarding" className="text-primary hover:underline">
+                Sign in
+              </Link>{' '}
+              and add your business from the dashboard.
+            </p>
+          )}
+        </div>
+
+        <div className="rounded-3xl bg-gradient-brand p-8 text-white">
+          <p className="font-display text-lg font-semibold">What providers say</p>
+          <blockquote className="mt-4 text-sm text-white/90">
+            &ldquo;FixLocal has become our top lead source. The booking calendar alone saves us
+            hours every week.&rdquo;
+          </blockquote>
+          <p className="mt-3 text-sm text-white/70">— Dana M., Dana&apos;s Cleaning Co.</p>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { siteConfig } from '@/lib/site-config';
+import { getCurrentUser } from '@/lib/auth/get-current-user';
 
 export const metadata: Metadata = {
   title: 'Join FixLocal as a provider',
@@ -18,7 +19,11 @@ const checklist = [
   'Start receiving bookings',
 ];
 
-export default function ProJoinPage() {
+export default async function ProJoinPage() {
+  const user = await getCurrentUser();
+  const ctaHref = user ? '/pro/onboarding' : '/signup?role=provider';
+  const ctaLabel = user ? 'Set up your provider profile' : 'Create provider account';
+
   return (
     <div className="container py-16">
       <div className="mx-auto grid max-w-4xl grid-cols-1 gap-12 lg:grid-cols-2">
@@ -41,16 +46,18 @@ export default function ProJoinPage() {
           </ul>
 
           <Button asChild size="lg" className="mt-8">
-            <Link href="/signup?role=provider">Create provider account</Link>
+            <Link href={ctaHref}>{ctaLabel}</Link>
           </Button>
 
-          <p className="mt-3 text-sm text-muted-foreground">
-            Already have an account?{' '}
-            <Link href="/login" className="text-primary hover:underline">
-              Sign in
-            </Link>{' '}
-            and add your business from the dashboard.
-          </p>
+          {!user && (
+            <p className="mt-3 text-sm text-muted-foreground">
+              Already have an account?{' '}
+              <Link href="/login?redirect=/pro/onboarding" className="text-primary hover:underline">
+                Sign in
+              </Link>{' '}
+              and add your business from the dashboard.
+            </p>
+          )}
         </div>
 
         <div className="rounded-3xl bg-gradient-brand p-8 text-white">
